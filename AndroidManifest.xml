@@ -22,6 +22,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <service
+            android:name=".RecordService">
+            <intent-filter>
+                <action android:name="RECORD_APP_BACKWARD"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

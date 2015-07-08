@@ -32,7 +32,7 @@ public class Catch extends Activity {
 	List<Map<String, Object>> mListItems = null;
 	List< PInfo > mInstalledApps = null;
 	Map<String, Object> item;
-	SimpleAdapter mListAdapter = null;
+	BrowseAppInfoAdapter mListAdapter = null;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,31 +58,12 @@ public class Catch extends Activity {
     }
     
     private void init(){
+    	
+    	//should add at the first time when the user install this app
     	 mInstalledApps = getInstalledApps(false);
          mListItems = new ArrayList< Map< String, Object > >();
-         
-         //should do the check only at the first time after the users install this app   
-         //--start
-         int size = mInstalledApps.size();
-         for( int i = 0; i < size; i++ ){
-        	 PInfo info = mInstalledApps.get(i);
-        	 if ( checkWhetherInDefaultApps(info.appName)){
-        		 item = new HashMap<String, Object>();
-        		 item.put("app_icon", info.icon);
-        		 item.put("app_name", info.appName);
-        		 item.put("app_hint", R.string.default_hint);
-        		 item.put("app_graph", R.drawable.graph);
-        		 mListItems.add(item);
-        	 }
-         }
-         //--end
-         
-         
-         
-         mListAdapter = new SimpleAdapter(this, mListItems, R.layout.list_item, 
-         									new String[]{"app_icon", "app_name", "app_hint", "app_graph"}, 
-         									new int[]{R.id.app_icon, R.id.app_name, R.id.app_hint, R.id.app_graph});
-         
+                
+         mListAdapter = new BrowseAppInfoAdapter(this, mInstalledApps.subList(0, 5));
          
     }
         
@@ -103,7 +84,7 @@ public class Catch extends Activity {
     		info.pName = pack.packageName;
     		info.icon = pack.applicationInfo.loadIcon(getPackageManager());
     		
-    		LogC.d(info.icon.toString());
+    		//LogC.d(info.icon.toString());
     		res.add(info);
     		
     	}
@@ -136,7 +117,15 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 	
 	public BrowseAppInfoAdapter(Context context, List< PInfo > apps){
 		inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		mListAppInfo = apps;
+		if( apps == null){
+			mListAppInfo = new ArrayList<PInfo>();
+		}else{
+			mListAppInfo = apps;
+		}
+	}
+	
+	public void addItem(Object object){
+		mListAppInfo.add((PInfo) object);
 	}
 	
 	@Override
@@ -164,6 +153,7 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		ViewHolder holder = null;
 		if ( convertView == null || convertView.getTag() == null){
 			view = inflater.inflate(R.layout.list_item, null);
+			holder = new ViewHolder(view);
 			view.setTag(holder);
 		}else{
 			view = convertView;
@@ -171,10 +161,14 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		}
 		
 		PInfo info = (PInfo) getItem(position);
+		if (holder == null){
+			return null;
+		}
 		holder.appIcon.setImageDrawable(info.icon);
 		holder.appName.setText(info.appName);
-		holder.appHint.setText(info.pName);
+		holder.appHint.setText(R.id.app_hint);
 		holder.appGraph.setImageResource(R.drawable.graph);
+		
 		return view;
 	}
 	

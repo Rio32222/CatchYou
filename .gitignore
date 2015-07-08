@@ -1,0 +1,7 @@
+#ignore files
+
+*.class
+*.dex
+*.ap_
+*.apk
+*.jar
