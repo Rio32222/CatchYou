@@ -1,5 +1,6 @@
 package com.rio.cat;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import android.app.ActivityManager;
@@ -10,12 +11,15 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.view.View.OnCreateContextMenuListener;
+import android.widget.Toast;
 
 public class RecordService extends Service {
 
 	final long DAYTIME = 24*60*60;
 	
-	List< PInfo > mRecordAppList = null;
+	private boolean isServiceAlive = false;
+	
+	ArrayList< PInfo > mRecordAppList = null;
 	
 	@Override
 	public void onCreate(){
@@ -23,8 +27,9 @@ public class RecordService extends Service {
 		
 		//×¢²á¼àÌý²¦ºÅÅÌ
 		
-		
+		//×¢²á¼àÌýÆ÷£¬¼àÌýactivityµÄ¶¯×÷
 	}
+	
 	
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -32,12 +37,49 @@ public class RecordService extends Service {
 		return null;
 	}
 
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId){
+		super.onStartCommand(intent, flags, startId);
+		
+		if( !isServiceAlive ){
+			mRecordAppList = intent.getParcelableArrayListExtra("inital_record_apps");
+			
+			if (mRecordAppList == null){
+				LogC.d("mRecordAppList is empty");
+			}
+			
+			Thread t = new Thread(new CheckBackwardRunnable());
+			t.start();
+		}
+		
+		isServiceAlive = true;
+		return START_STICKY;
+	}
+	
+	private synchronized ArrayList< PInfo > getRecordAppList(){
+		return mRecordAppList;
+	}
+	
+	private synchronized void setRecordAppList(ArrayList< PInfo > apps){
+		mRecordAppList = apps;
+	}
+	
+	private synchronized void addAppItem(PInfo info){
+		
+	}
+	
+	private synchronized ArrayList< PInfo > delAppItem(PInfo info){
+		return null;
+	}
+	
 	public boolean checkWhetherRecord(String appName){
 		if( mRecordAppList == null ){
 			return false;
 		}
 		
-		for( PInfo pInfo: mRecordAppList ){
+		ArrayList< PInfo > tempAppList = getRecordAppList();
+		
+		for( PInfo pInfo: tempAppList ){
 			if( appName.equals(pInfo.appName) ){
 				return true;
 			}
@@ -48,9 +90,10 @@ public class RecordService extends Service {
 	public void recordChangedTime(String prevApp, String currentApp){
 		long time = System.currentTimeMillis()/1000; 
 		
+		Toast.makeText(this, String.valueOf(time), Toast.LENGTH_LONG).show();
 	}
 	
-	public void storeToDB(String name, );
+//	public void storeToDB(String name, );
 	
 	class CheckBackwardRunnable implements Runnable{
 

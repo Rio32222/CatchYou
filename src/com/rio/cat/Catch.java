@@ -7,9 +7,12 @@ import java.util.Map;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.provider.ContactsContract.PinnedPositions;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -29,9 +32,9 @@ public class Catch extends Activity {
 
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 	
-	List<Map<String, Object>> mListItems = null;
+	List<Map< String, Object > > mListItems = null;
 	List< PInfo > mInstalledApps = null;
-	Map<String, Object> item;
+	Map< String, Object > item;
 	BrowseAppInfoAdapter mListAdapter = null;
 	
     @Override
@@ -55,6 +58,18 @@ public class Catch extends Activity {
 		});
         
         rootList.setAdapter(mListAdapter);
+        
+        ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
+        
+        //This is for a test --start
+        initRecordApps.add(mInstalledApps.get(0));
+        initRecordApps.add(mInstalledApps.get(1));
+        //This is for a test --end
+        
+        
+        Intent intent = new Intent(Catch.this, RecordService.class);
+        intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
+        startService(intent);
     }
     
     private void init(){
@@ -101,12 +116,46 @@ public class Catch extends Activity {
     }
 }
 
-class PInfo{
+class PInfo implements Parcelable{
 	public String appName="";
 	public String pName="";
 	public String versionName="";
 	public String versionCode="";
 	public Drawable icon;
+	@Override
+	public int describeContents() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+	@Override
+	public void writeToParcel(Parcel dest, int flags) {
+		// TODO Auto-generated method stub
+		dest.writeString(appName);
+		dest.writeString(pName);
+		dest.writeValue(icon);
+	}
+	
+	public static final Parcelable.Creator< PInfo > CREATOR = new Parcelable.Creator< PInfo >(){
+		
+		public PInfo[] newArray(int size){
+			return new PInfo[size];
+		}
+
+		@Override
+		public PInfo createFromParcel(Parcel source) {
+			// TODO Auto-generated method stub
+			return new PInfo(source);
+		}
+	};
+	
+	private PInfo(Parcel in){
+		appName = in.readString();
+		pName = in.readString();
+		icon =  (Drawable) in.readValue(PInfo.class.getClassLoader());
+	}
+	
+	public PInfo(){}
+	
 }
 
 class BrowseAppInfoAdapter extends BaseAdapter{
