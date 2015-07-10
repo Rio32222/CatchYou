@@ -15,11 +15,14 @@ import android.widget.Toast;
 
 public class RecordService extends Service {
 
+	public static final int FLAG_START = 1;
+	public static final int FLAG_CHANGED = 2;
+	
 	final long DAYTIME = 24*60*60;
 	
-	private boolean isServiceAlive = false;
-	
+	private boolean isServiceAlive = false;	
 	ArrayList< PInfo > mRecordAppList = null;
+	CheckBackwardRunnable mCheckRunnable = null;
 	
 	@Override
 	public void onCreate(){
@@ -41,15 +44,28 @@ public class RecordService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId){
 		super.onStartCommand(intent, flags, startId);
 		
+		if(intent == null){
+			return 0;
+		}
+		
+		LogC.d("RecordService start");
+		
 		if( !isServiceAlive ){
 			mRecordAppList = intent.getParcelableArrayListExtra("inital_record_apps");
+			
+			for(PInfo info: mRecordAppList){  // for debug
+				LogC.d(info.pName);
+			}
 			
 			if (mRecordAppList == null){
 				LogC.d("mRecordAppList is empty");
 			}
 			
-			Thread t = new Thread(new CheckBackwardRunnable());
-			t.start();
+			mCheckRunnable = new CheckBackwardRunnable();
+			if( mCheckRunnable != null){
+				new Thread( mCheckRunnable).start();
+			}
+			
 		}
 		
 		isServiceAlive = true;
@@ -72,25 +88,57 @@ public class RecordService extends Service {
 		return null;
 	}
 	
-	public boolean checkWhetherRecord(String appName){
-		if( mRecordAppList == null ){
-			return false;
-		}
-		
+	public PInfo checkWhetherInRecordApps(String packageName){
+
 		ArrayList< PInfo > tempAppList = getRecordAppList();
 		
+		if(tempAppList == null){
+			return null;
+		}
+		
 		for( PInfo pInfo: tempAppList ){
-			if( appName.equals(pInfo.appName) ){
-				return true;
+			if( packageName.equals(pInfo.pName) ){
+				return pInfo;
 			}
 		}
-		return false;
+		return null;
 	}
 	
-	public void recordChangedTime(String prevApp, String currentApp){
-		long time = System.currentTimeMillis()/1000; 
+	//记录切换前后app的时间
+	public void recordChangedTime(PInfo pInfo, int flag){
+		long time = 0;
+		try{
+			time = System.currentTimeMillis()/1000; 
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 		
-		Toast.makeText(this, String.valueOf(time), Toast.LENGTH_LONG).show();
+		LogC.v(String.valueOf(time) + " " + String.valueOf(flag));
+		
+		insertDataToDB(pInfo, flag, time);
+		
+	}
+	
+	private void insertDataToDB(PInfo pInfo, int flag, long systemTime){
+		CatchDB db = CatchDB.getInstatnce();
+		
+	}
+	
+	//根据app名得到PInfo的信息
+	private PInfo getPInfoBasePName(String pName){
+		ArrayList< PInfo > tempAppList = getRecordAppList();
+		
+		if(tempAppList == null){
+			return null;
+		}
+		
+		for( PInfo pInfo: tempAppList ){
+			if( pName.equals(pInfo.pName) ){
+				return pInfo;
+			}
+		}
+		return null;
+		
 	}
 	
 //	public void storeToDB(String name, );
@@ -135,15 +183,24 @@ public class RecordService extends Service {
 				/**获取应用的包名**/
 				String runningPackageName = topActivity.getPackageName();
 				
-				if( checkWhetherRecord(runningPackageName) ){
-					if( runningPackageName.equals(currentPackageName) ){
-						//一直在使用此app
-					}else{
-						//切换了app
-						recordChangedTime(currentPackageName, runningPackageName);
+				if( runningPackageName.equals(currentPackageName) ){
+					SystemClock.sleep(sleepTime*1000);
+					continue;
+				}else{
+					LogC.v(runningPackageName);
+					LogC.v(currentPackageName);
+					//如果上次运行的app和这次运行的app时间不一致，则检查两个app是否需要被记录时间
+					PInfo pInfo = checkWhetherInRecordApps(currentPackageName);
+					if ( pInfo != null ){
+						recordChangedTime(pInfo, FLAG_CHANGED);
+					}
+					
+					pInfo = checkWhetherInRecordApps(runningPackageName);
+					if ( pInfo != null ){
+						recordChangedTime(pInfo, FLAG_START);
 					}
 				}
-
+				
 				currentPackageName = runningPackageName;
 				
 				//设置每次循环的时间间隔

@@ -62,14 +62,17 @@ public class Catch extends Activity {
         ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
         
         //This is for a test --start
-        initRecordApps.add(mInstalledApps.get(0));
-        initRecordApps.add(mInstalledApps.get(1));
+        initRecordApps.add(mInstalledApps.get(3));
+        initRecordApps.add(mInstalledApps.get(4));
         //This is for a test --end
         
+        LogC.d(mInstalledApps.get(3).pName);
         
         Intent intent = new Intent(Catch.this, RecordService.class);
         intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
-        startService(intent);
+        if( intent != null){
+        	startService(intent);
+        }
     }
     
     private void init(){
@@ -95,11 +98,11 @@ public class Catch extends Activity {
     		PInfo info = new PInfo();
     		info.appName = (String) pack.applicationInfo.loadLabel(getPackageManager());
     		//LogC.d(info.appName);
-    		
+    		info.versionName = pack.versionName;
+    		info.versionCode = pack.versionCode;
     		info.pName = pack.packageName;
     		info.icon = pack.applicationInfo.loadIcon(getPackageManager());
     		
-    		//LogC.d(info.icon.toString());
     		res.add(info);
     		
     	}
@@ -114,25 +117,29 @@ public class Catch extends Activity {
     	}
     	return false;
     }
+    
 }
 
 class PInfo implements Parcelable{
 	public String appName="";
 	public String pName="";
 	public String versionName="";
-	public String versionCode="";
+	public int versionCode= -1;
 	public Drawable icon;
 	@Override
 	public int describeContents() {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+	
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
 		// TODO Auto-generated method stub
 		dest.writeString(appName);
 		dest.writeString(pName);
-		dest.writeValue(icon);
+		dest.writeString(versionName);
+		dest.writeInt(versionCode);
+		//dest.writeValue(icon);
 	}
 	
 	public static final Parcelable.Creator< PInfo > CREATOR = new Parcelable.Creator< PInfo >(){
@@ -151,10 +158,27 @@ class PInfo implements Parcelable{
 	private PInfo(Parcel in){
 		appName = in.readString();
 		pName = in.readString();
-		icon =  (Drawable) in.readValue(PInfo.class.getClassLoader());
+		versionName = in.readString();
+		versionCode = in.readInt();
+		//icon =  (Drawable) in.readValue(PInfo.class.getClassLoader());
 	}
 	
 	public PInfo(){}
+	
+	public PInfo(String appName, String pName, ArrayList< PInfo > appList){
+		for(PInfo info: appList){
+			if( info.appName.equals(appName) && info.pName.equals(pName)){
+				this.appName = appName;
+				this.pName = pName;
+				this.versionCode = info.versionCode;
+				this.versionName = info.versionName;
+				this.icon = info.icon;
+				
+				break;
+			}
+		}
+	}
+	
 	
 }
 

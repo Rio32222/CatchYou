@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase;
 public class CatchDB {
 	final String PATH = "/mnt/db/temp.db3";
 	
-	public static CatchDB instance = null;
+	private static CatchDB instance = null;
 	
 	SQLiteDatabase mDataBase = null;
 	
