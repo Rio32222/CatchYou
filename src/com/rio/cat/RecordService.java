@@ -7,6 +7,7 @@ import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -120,8 +121,19 @@ public class RecordService extends Service {
 	}
 	
 	private void insertDataToDB(PInfo pInfo, int flag, long systemTime){
-		CatchDB db = CatchDB.getInstatnce();
+		CatchDBHelper dbHelper = CatchDBHelper.getInstance(this);
+		if( dbHelper == null ){
+			LogC.e("DB is not created, insert data error");
+			return;
+		}
 		
+		ContentValues keyValues = new ContentValues();
+		keyValues.put(CatchDBHelper.TableKey[0], pInfo.pName);
+		keyValues.put(CatchDBHelper.TableKey[1], pInfo.appName);
+		keyValues.put(CatchDBHelper.TableKey[2], flag);
+		keyValues.put(CatchDBHelper.TableKey[3], systemTime);
+		dbHelper.insertData(keyValues);
+
 	}
 	
 	//根据app名得到PInfo的信息
@@ -187,8 +199,8 @@ public class RecordService extends Service {
 					SystemClock.sleep(sleepTime*1000);
 					continue;
 				}else{
-					LogC.v(runningPackageName);
-					LogC.v(currentPackageName);
+					//LogC.v(runningPackageName);
+					//LogC.v(currentPackageName);
 					//如果上次运行的app和这次运行的app时间不一致，则检查两个app是否需要被记录时间
 					PInfo pInfo = checkWhetherInRecordApps(currentPackageName);
 					if ( pInfo != null ){

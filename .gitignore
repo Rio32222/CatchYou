@@ -5,4 +5,5 @@
 *.ap_
 *.apk
 *.jar
-bin/
+/bin
+/db
