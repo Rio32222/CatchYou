@@ -2,19 +2,20 @@ package com.rio.cat;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 
-public class CatchDBHelper extends SQLiteOpenHelper{
+class CatchStoreDataDBHelper extends SQLiteOpenHelper{
 
-	private static CatchDBHelper instance = null;
+	private static CatchStoreDataDBHelper instance = null;
 	public static final int DB_VERSION = 1;
 	
-	public static CatchDBHelper getInstance(Context context){
+	public static CatchStoreDataDBHelper getInstance(Context context){
 		if( instance == null){
-			instance = new CatchDBHelper(context, "xiong.db3", DB_VERSION);
+			instance = new CatchStoreDataDBHelper(context, "xiong.db3", DB_VERSION);
 		}
 		
 		return instance;
@@ -22,35 +23,25 @@ public class CatchDBHelper extends SQLiteOpenHelper{
 	
 	final String TABLE = "AppRecord";
 	
-	/*
 	final String CREATE_TABLE_SQL = 
 			"create table "+
 			TABLE +
-			"(_id integer primary," +
-			"Package char," +
-			"App char(255)," +
-			"Flag integer(1) NOT NULL," +
-			"Time int," +
-			"OrderDate date DEFAULT GETDATE()" +
-			")";
-	*/
-	
-	final String CREATE_TABLE_SQL = 
-			"create table AppRecord(Package varchar," +
+			"(Package varchar," +
 			"App varchar," +
-			"Flag int," +
-			"Time int" +
+			"Flag integer," +
+			"TimeStamp integer," +
+			"Date varchar" +
 			")";
-	
 	
 	public static final String[] TableKey = {
 			"Package",
 			"App",
 			"Flag",
-			"Time"
+			"TimeStamp", 
+			"Date"
 	};
 	
-	private CatchDBHelper(Context context, String name, int version){
+	private CatchStoreDataDBHelper(Context context, String name, int version){
 		super(context, name, null, version);
 		
 	}
@@ -86,6 +77,81 @@ public class CatchDBHelper extends SQLiteOpenHelper{
 		
 		return true;
 	}
+}
+
+class CatchStoreAppDBHelper extends SQLiteOpenHelper{
+
+	private static CatchStoreAppDBHelper instance = null;
+	public static final int DB_VERSION = 1;
+	
+	public static final int DB_PACKAGE_COLUMN = 1;
+	public static final int DB_APPNAME_COLUMN = 2;
+	public static final int DB_VERSIONNAME_COLUMN = 3;
+	public static final int DB_VERSIONCODE_COLUMN = 4;
+	public static final int DB_ICON_COLUMN = 5;
+	
+	public static final String DB_PACKAGE_KEY = "Package";
+	public static final String DB_APPNAME_KEY = "AppName";
+	public static final String DB_VERSIONNAME_KEY = "VersionName";
+	public static final String DB_VERSIONCODE_KEY = "VersionCode";
+	public static final String DB_ICON_KEY = "Icon";
+	
+	public static CatchStoreAppDBHelper getInstance(Context context){
+		if( instance == null){
+			instance = new CatchStoreAppDBHelper(context, "xiong.db3", DB_VERSION);
+		}
+		
+		return instance;
+	}
+	
+	public final String TABLE = "AppSelected";
+	public final String CREATE_TABLE_SQL = "create table " +
+			TABLE+
+			"(Package varchar," +
+			"AppName varchar," +
+			"VersionName varchar" +
+			"VersionCode integer," +
+			"Icon blob" +
+			")";
 	
 	
+	public CatchStoreAppDBHelper(Context context, String name, int version){
+		super(context, name, null, version);
+	}
+	
+	@Override
+	public void onCreate(SQLiteDatabase db) {
+		// TODO Auto-generated method stub
+		try{
+			db.execSQL(CREATE_TABLE_SQL);
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	public void inserData(ContentValues keyValues){
+		SQLiteDatabase db = getWritableDatabase();
+		
+		try{
+			db.insert(TABLE, null, keyValues);
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public Cursor getStoreDBCursor(){
+		SQLiteDatabase db = getReadableDatabase();
+		
+		String sqlQuery = new String("select * from " + TABLE);
+		Cursor cursor = db.rawQuery(sqlQuery, null);
+		
+		return cursor;
+	}
 }

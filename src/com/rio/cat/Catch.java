@@ -6,9 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 import android.app.Activity;
+import android.app.DownloadManager.Query;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcel;
@@ -32,7 +37,6 @@ public class Catch extends Activity {
 
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 	
-	List<Map< String, Object > > mListItems = null;
 	List< PInfo > mInstalledApps = null;
 	Map< String, Object > item;
 	BrowseAppInfoAdapter mListAdapter = null;
@@ -58,33 +62,66 @@ public class Catch extends Activity {
 		});
         
         rootList.setAdapter(mListAdapter);
-        
-        ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
-        
-        //This is for a test --start
-        initRecordApps.add(mInstalledApps.get(3));
-        initRecordApps.add(mInstalledApps.get(4));
-        //This is for a test --end
-        
-        LogC.d(mInstalledApps.get(3).pName);
-        
-        Intent intent = new Intent(Catch.this, RecordService.class);
-        intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
-        if( intent != null){
-        	startService(intent);
-        }
     }
     
     private void init(){
     	
     	//should add at the first time when the user install this app
     	 mInstalledApps = getInstalledApps(false);
-         mListItems = new ArrayList< Map< String, Object > >();
-                
-         mListAdapter = new BrowseAppInfoAdapter(this, mInstalledApps.subList(0, 5));
          
+
+         ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
+         
+         //This is for a test --start
+         //initRecordApps.add(mInstalledApps.get(3));
+         //initRecordApps.add(mInstalledApps.get(4));
+         //This is for a test --end
+         
+         initRecordApps = getInitRecordApps();
+         
+        // LogC.d(mInstalledApps.get(3).pName);
+         
+         mListAdapter = new BrowseAppInfoAdapter(this, initRecordApps);
+         
+         Intent intent = new Intent(Catch.this, RecordService.class);
+         intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
+         if( intent != null){
+         	startService(intent);
+         }
     }
         
+    public ArrayList< PInfo > getInitRecordApps(){
+    	ArrayList< PInfo > initApps = new ArrayList< PInfo >();
+    	
+    	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
+    	if( storeDBHelper == null){
+    		return null;
+    	}
+    	
+    	//query for the databases to get the initapps;
+    	//store first
+    	Cursor cursor = storeDBHelper.getStoreDBCursor();
+    	if(cursor != null && !cursor.isClosed()){
+    		do{
+    			PInfo pInfo = new PInfo();
+    			pInfo.appName = cursor.getString(CatchStoreAppDBHelper.DB_APPNAME_COLUMN);
+    			pInfo.pName = cursor.getString(CatchStoreAppDBHelper.DB_PACKAGE_COLUMN);
+    			pInfo.versionName = cursor.getString(CatchStoreAppDBHelper.DB_VERSIONNAME_COLUMN);
+    			pInfo.versionCode = cursor.getInt(CatchStoreAppDBHelper.DB_VERSIONCODE_COLUMN);
+    			
+    			byte [] iconByte = cursor.getBlob(CatchStoreAppDBHelper.DB_ICON_COLUMN);
+    			
+    			pInfo.bitmapIcon = BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length);
+    			
+    		}while( cursor.moveToNext());
+    		
+    		cursor.close();
+    	}
+    	
+    
+    	return initApps;
+    }
+    
     private ArrayList< PInfo > getInstalledApps(boolean getSysPackages){
     	ArrayList<PInfo> res = new ArrayList<PInfo>();
     	
@@ -101,13 +138,19 @@ public class Catch extends Activity {
     		info.versionName = pack.versionName;
     		info.versionCode = pack.versionCode;
     		info.pName = pack.packageName;
-    		info.icon = pack.applicationInfo.loadIcon(getPackageManager());
+    		Drawable icon = pack.applicationInfo.loadIcon(getPackageManager());
+    		info.bitmapIcon = ((BitmapDrawable)icon).getBitmap();
     		
     		res.add(info);
     		
     	}
     	return res;
     }
+    
+    public void addRecordApp(PInfo pInfo){
+    	
+    }
+    
     
     private boolean checkWhetherInDefaultApps(String name){
     	for( String appname:DefaultApps){
@@ -125,7 +168,7 @@ class PInfo implements Parcelable{
 	public String pName="";
 	public String versionName="";
 	public int versionCode= -1;
-	public Drawable icon;
+	public Bitmap bitmapIcon;
 	@Override
 	public int describeContents() {
 		// TODO Auto-generated method stub
@@ -139,6 +182,7 @@ class PInfo implements Parcelable{
 		dest.writeString(pName);
 		dest.writeString(versionName);
 		dest.writeInt(versionCode);
+		dest.writeParcelable(bitmapIcon, PARCELABLE_WRITE_RETURN_VALUE);
 		//dest.writeValue(icon);
 	}
 	
@@ -155,16 +199,26 @@ class PInfo implements Parcelable{
 		}
 	};
 	
-	private PInfo(Parcel in){
+	public PInfo(Parcel in){
 		appName = in.readString();
 		pName = in.readString();
 		versionName = in.readString();
 		versionCode = in.readInt();
-		//icon =  (Drawable) in.readValue(PInfo.class.getClassLoader());
+		bitmapIcon = in.readParcelable( Bitmap.class.getClassLoader() );
+	}
+	
+	public PInfo(String pName, String appName, String versionName, int versionCode, byte[] iconStream){
+		this.pName = pName;
+		this.appName = appName;
+		this.versionName = versionName;
+		this.versionCode = versionCode;
+		
+		this.bitmapIcon = BitmapFactory.decodeByteArray(iconStream, 0, iconStream.length);
 	}
 	
 	public PInfo(){}
 	
+	//actually this is useless
 	public PInfo(String appName, String pName, ArrayList< PInfo > appList){
 		for(PInfo info: appList){
 			if( info.appName.equals(appName) && info.pName.equals(pName)){
@@ -172,14 +226,12 @@ class PInfo implements Parcelable{
 				this.pName = pName;
 				this.versionCode = info.versionCode;
 				this.versionName = info.versionName;
-				this.icon = info.icon;
+				this.bitmapIcon = info.bitmapIcon;
 				
 				break;
 			}
 		}
 	}
-	
-	
 }
 
 class BrowseAppInfoAdapter extends BaseAdapter{
@@ -237,7 +289,9 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		if (holder == null){
 			return null;
 		}
-		holder.appIcon.setImageDrawable(info.icon);
+		
+		
+		holder.appIcon.setImageBitmap(info.bitmapIcon);
 		holder.appName.setText(info.appName);
 		holder.appHint.setText(R.id.app_hint);
 		holder.appGraph.setImageResource(R.drawable.graph);

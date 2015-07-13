@@ -1,8 +1,11 @@
 package com.rio.cat;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.app.Service;
@@ -107,33 +110,39 @@ public class RecordService extends Service {
 	
 	//记录切换前后app的时间
 	public void recordChangedTime(PInfo pInfo, int flag){
-		long time = 0;
+		long sysTime = 0;
 		try{
-			time = System.currentTimeMillis()/1000; 
+			sysTime = System.currentTimeMillis()/1000; 
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 		
-		LogC.v(String.valueOf(time) + " " + String.valueOf(flag));
+		LogC.v(String.valueOf(sysTime) + " " + String.valueOf(flag));
 		
-		insertDataToDB(pInfo, flag, time);
+		insertDataToDB(pInfo, flag, sysTime);
 		
 	}
 	
-	private void insertDataToDB(PInfo pInfo, int flag, long systemTime){
-		CatchDBHelper dbHelper = CatchDBHelper.getInstance(this);
+	@SuppressLint("SimpleDateFormat") 
+	private void insertDataToDB(PInfo pInfo, int flag, long sysTime){
+		CatchStoreDataDBHelper dbHelper = CatchStoreDataDBHelper.getInstance(this);
 		if( dbHelper == null ){
 			LogC.e("DB is not created, insert data error");
 			return;
 		}
 		
 		ContentValues keyValues = new ContentValues();
-		keyValues.put(CatchDBHelper.TableKey[0], pInfo.pName);
-		keyValues.put(CatchDBHelper.TableKey[1], pInfo.appName);
-		keyValues.put(CatchDBHelper.TableKey[2], flag);
-		keyValues.put(CatchDBHelper.TableKey[3], systemTime);
+		keyValues.put(CatchStoreDataDBHelper.TableKey[0], pInfo.pName);
+		keyValues.put(CatchStoreDataDBHelper.TableKey[1], pInfo.appName);
+		keyValues.put(CatchStoreDataDBHelper.TableKey[2], flag);
+		keyValues.put(CatchStoreDataDBHelper.TableKey[3], sysTime);
+		
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh-mm");
+		Date curDate = new Date(sysTime*1000);
+		String date = formatter.format(curDate);
+		
+		keyValues.put(CatchStoreDataDBHelper.TableKey[4], date);
 		dbHelper.insertData(keyValues);
-
 	}
 	
 	//根据app名得到PInfo的信息
