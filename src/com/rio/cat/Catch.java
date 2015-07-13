@@ -101,8 +101,10 @@ public class Catch extends Activity {
     	//query for the databases to get the initapps;
     	//store first
     	Cursor cursor = storeDBHelper.getStoreDBCursor();
-    	if(cursor != null && !cursor.isClosed()){
-    		do{
+    	
+    	if( cursor != null && !cursor.isClosed() ){
+    		while(!cursor.isAfterLast()){
+    			
     			PInfo pInfo = new PInfo();
     			pInfo.appName = cursor.getString(CatchStoreAppDBHelper.DB_APPNAME_COLUMN);
     			pInfo.pName = cursor.getString(CatchStoreAppDBHelper.DB_PACKAGE_COLUMN);
@@ -113,8 +115,10 @@ public class Catch extends Activity {
     			
     			pInfo.bitmapIcon = BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length);
     			
-    		}while( cursor.moveToNext());
-    		
+    			initApps.add(pInfo);
+    			
+    			cursor.moveToNext();
+    		}
     		cursor.close();
     	}
     	
