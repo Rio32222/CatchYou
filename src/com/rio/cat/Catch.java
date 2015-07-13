@@ -1,5 +1,6 @@
 package com.rio.cat;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,11 +8,13 @@ import java.util.Map;
 
 import android.app.Activity;
 import android.app.DownloadManager.Query;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -69,6 +72,8 @@ public class Catch extends Activity {
     	//should add at the first time when the user install this app
     	 mInstalledApps = getInstalledApps(false);
          
+    	 
+    	 
 
          ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
          
@@ -90,6 +95,32 @@ public class Catch extends Activity {
          }
     }
         
+    public void insertData(PInfo pInfo){
+    	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
+    	if( storeDBHelper == null){
+    		return;
+    	}
+    	
+    	ContentValues keyValues = new ContentValues();
+    	keyValues.put(CatchStoreAppDBHelper.DB_PACKAGE_KEY, pInfo.pName);
+    	keyValues.put(CatchStoreAppDBHelper.DB_APPNAME_KEY, pInfo.appName);
+    	keyValues.put(CatchStoreAppDBHelper.DB_VERSIONNAME_KEY, pInfo.versionName);
+    	keyValues.put(CatchStoreAppDBHelper.DB_VERSIONCODE_KEY, pInfo.versionCode);
+    	
+    	if(pInfo.bitmapIcon != null){
+    		ByteArrayOutputStream os = new ByteArrayOutputStream();
+    		if( pInfo.bitmapIcon.compress(CompressFormat.PNG, 100, os) ){
+    			keyValues.put(CatchStoreAppDBHelper.DB_ICON_KEY, os.toByteArray());
+    		}
+    	}else{
+    		LogC.e(pInfo.appName +"'s icon is null");
+    	}
+    	
+    	storeDBHelper.insertData(keyValues);
+    	
+    }
+    
+    
     public ArrayList< PInfo > getInitRecordApps(){
     	ArrayList< PInfo > initApps = new ArrayList< PInfo >();
     	

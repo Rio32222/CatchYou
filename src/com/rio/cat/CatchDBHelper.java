@@ -13,6 +13,13 @@ class CatchStoreDataDBHelper extends SQLiteOpenHelper{
 	private static CatchStoreDataDBHelper instance = null;
 	public static final int DB_VERSION = 1;
 	
+	public static final String DB_PACKAGE_KEY = "Package";
+	public static final String DB_APPNAME_KEY = "App";
+	public static final String DB_FLAG_KEY = "Flag";
+	public static final String DB_TIMESTAMP_KEY = "TimeStamp";
+	public static final String DB_DATE_KEY = "Date";
+	
+	
 	public static CatchStoreDataDBHelper getInstance(Context context){
 		if( instance == null){
 			instance = new CatchStoreDataDBHelper(context, "xiong.db3", DB_VERSION);
@@ -32,14 +39,6 @@ class CatchStoreDataDBHelper extends SQLiteOpenHelper{
 			"TimeStamp integer," +
 			"Date varchar" +
 			")";
-	
-	public static final String[] TableKey = {
-			"Package",
-			"App",
-			"Flag",
-			"TimeStamp", 
-			"Date"
-	};
 	
 	private CatchStoreDataDBHelper(Context context, String name, int version){
 		super(context, name, null, version);
@@ -135,7 +134,7 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 		
 	}
 	
-	public void inserData(ContentValues keyValues){
+	public void insertData(ContentValues keyValues){
 		SQLiteDatabase db = getWritableDatabase();
 		
 		try{

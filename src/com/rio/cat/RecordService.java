@@ -132,16 +132,16 @@ public class RecordService extends Service {
 		}
 		
 		ContentValues keyValues = new ContentValues();
-		keyValues.put(CatchStoreDataDBHelper.TableKey[0], pInfo.pName);
-		keyValues.put(CatchStoreDataDBHelper.TableKey[1], pInfo.appName);
-		keyValues.put(CatchStoreDataDBHelper.TableKey[2], flag);
-		keyValues.put(CatchStoreDataDBHelper.TableKey[3], sysTime);
+		keyValues.put(CatchStoreDataDBHelper.DB_PACKAGE_KEY, pInfo.pName);
+		keyValues.put(CatchStoreDataDBHelper.DB_APPNAME_KEY, pInfo.appName);
+		keyValues.put(CatchStoreDataDBHelper.DB_FLAG_KEY, flag);
+		keyValues.put(CatchStoreDataDBHelper.DB_TIMESTAMP_KEY, sysTime);
 		
 		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh-mm");
 		Date curDate = new Date(sysTime*1000);
 		String date = formatter.format(curDate);
 		
-		keyValues.put(CatchStoreDataDBHelper.TableKey[4], date);
+		keyValues.put(CatchStoreDataDBHelper.DB_DATE_KEY, date);
 		dbHelper.insertData(keyValues);
 	}
 	
@@ -162,7 +162,6 @@ public class RecordService extends Service {
 		
 	}
 	
-//	public void storeToDB(String name, );
 	
 	class CheckBackwardRunnable implements Runnable{
 
