@@ -83,11 +83,11 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 	private static CatchStoreAppDBHelper instance = null;
 	public static final int DB_VERSION = 1;
 	
-	public static final int DB_PACKAGE_COLUMN = 1;
-	public static final int DB_APPNAME_COLUMN = 2;
-	public static final int DB_VERSIONNAME_COLUMN = 3;
-	public static final int DB_VERSIONCODE_COLUMN = 4;
-	public static final int DB_ICON_COLUMN = 5;
+	public static final int DB_PACKAGE_COLUMN = 0;
+	public static final int DB_APPNAME_COLUMN = 1;
+	public static final int DB_VERSIONNAME_COLUMN = 2;
+	public static final int DB_VERSIONCODE_COLUMN = 3;
+	public static final int DB_ICON_COLUMN = 4;
 	
 	public static final String DB_PACKAGE_KEY = "Package";
 	public static final String DB_APPNAME_KEY = "AppName";
@@ -97,7 +97,7 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 	
 	public static CatchStoreAppDBHelper getInstance(Context context){
 		if( instance == null){
-			instance = new CatchStoreAppDBHelper(context, "xiong.db3", DB_VERSION);
+			instance = new CatchStoreAppDBHelper(context, "xiong.db1", DB_VERSION);
 		}
 		
 		return instance;
@@ -108,7 +108,7 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 			TABLE+
 			"(Package varchar," +
 			"AppName varchar," +
-			"VersionName varchar" +
+			"VersionName varchar," +
 			"VersionCode integer," +
 			"Icon blob" +
 			")";
@@ -149,8 +149,12 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 		SQLiteDatabase db = getReadableDatabase();
 		
 		String sqlQuery = new String("select * from " + TABLE);
-		Cursor cursor = db.rawQuery(sqlQuery, null);
-		
-		return cursor;
+		try{
+			Cursor cursor = db.rawQuery(sqlQuery, null);
+			return cursor;
+		}catch(SQLException e){
+			e.printStackTrace();
+			return null;
+		}
 	}
 }

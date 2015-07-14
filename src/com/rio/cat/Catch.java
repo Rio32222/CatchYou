@@ -13,6 +13,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
@@ -73,7 +75,8 @@ public class Catch extends Activity {
     	 mInstalledApps = getInstalledApps(false);
          
     	 
-    	 
+    	 insertData(mInstalledApps.get(1));
+    	 insertData(mInstalledApps.get(2));
 
          ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
          
@@ -107,9 +110,9 @@ public class Catch extends Activity {
     	keyValues.put(CatchStoreAppDBHelper.DB_VERSIONNAME_KEY, pInfo.versionName);
     	keyValues.put(CatchStoreAppDBHelper.DB_VERSIONCODE_KEY, pInfo.versionCode);
     	
-    	if(pInfo.bitmapIcon != null){
+    	if(pInfo.getBitmap() != null){
     		ByteArrayOutputStream os = new ByteArrayOutputStream();
-    		if( pInfo.bitmapIcon.compress(CompressFormat.PNG, 100, os) ){
+    		if( pInfo.getBitmap().compress(CompressFormat.PNG, 100, os) ){
     			keyValues.put(CatchStoreAppDBHelper.DB_ICON_KEY, os.toByteArray());
     		}
     	}else{
@@ -132,23 +135,31 @@ public class Catch extends Activity {
     	//query for the databases to get the initapps;
     	//store first
     	Cursor cursor = storeDBHelper.getStoreDBCursor();
-    	
+    	int index = 0;
     	if( cursor != null && !cursor.isClosed() ){
-    		while(!cursor.isAfterLast()){
+    		while( cursor.moveToNext() ){
     			
     			PInfo pInfo = new PInfo();
-    			pInfo.appName = cursor.getString(CatchStoreAppDBHelper.DB_APPNAME_COLUMN);
-    			pInfo.pName = cursor.getString(CatchStoreAppDBHelper.DB_PACKAGE_COLUMN);
-    			pInfo.versionName = cursor.getString(CatchStoreAppDBHelper.DB_VERSIONNAME_COLUMN);
-    			pInfo.versionCode = cursor.getInt(CatchStoreAppDBHelper.DB_VERSIONCODE_COLUMN);
+    			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_APPNAME_KEY);
+    			pInfo.appName = cursor.getString(index);
+
+    			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_PACKAGE_KEY);
+    			pInfo.pName = cursor.getString(index);
     			
-    			byte [] iconByte = cursor.getBlob(CatchStoreAppDBHelper.DB_ICON_COLUMN);
+    			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_VERSIONNAME_KEY);
+    			pInfo.versionName = cursor.getString(index);
     			
-    			pInfo.bitmapIcon = BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length);
+    			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_VERSIONCODE_KEY);
+    			pInfo.versionCode = cursor.getInt(index);
+    			
+    			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_ICON_KEY);
+    			byte [] iconByte = cursor.getBlob(index);
+    			
+    			pInfo.setBitmap( BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length));
     			
     			initApps.add(pInfo);
     			
-    			cursor.moveToNext();
+    			
     		}
     		cursor.close();
     	}
@@ -174,7 +185,7 @@ public class Catch extends Activity {
     		info.versionCode = pack.versionCode;
     		info.pName = pack.packageName;
     		Drawable icon = pack.applicationInfo.loadIcon(getPackageManager());
-    		info.bitmapIcon = ((BitmapDrawable)icon).getBitmap();
+    		info.setBitmap( ((BitmapDrawable)icon).getBitmap() );
     		
     		res.add(info);
     		
@@ -203,7 +214,7 @@ class PInfo implements Parcelable{
 	public String pName="";
 	public String versionName="";
 	public int versionCode= -1;
-	public Bitmap bitmapIcon;
+	private Bitmap bitmapIcon;
 	@Override
 	public int describeContents() {
 		// TODO Auto-generated method stub
@@ -217,7 +228,7 @@ class PInfo implements Parcelable{
 		dest.writeString(pName);
 		dest.writeString(versionName);
 		dest.writeInt(versionCode);
-		dest.writeParcelable(bitmapIcon, PARCELABLE_WRITE_RETURN_VALUE);
+		//dest.writeParcelable(bitmapIcon, PARCELABLE_WRITE_RETURN_VALUE);
 		//dest.writeValue(icon);
 	}
 	
@@ -239,7 +250,7 @@ class PInfo implements Parcelable{
 		pName = in.readString();
 		versionName = in.readString();
 		versionCode = in.readInt();
-		bitmapIcon = in.readParcelable( Bitmap.class.getClassLoader() );
+		//bitmapIcon = in.readParcelable( Bitmap.class.getClassLoader() );
 	}
 	
 	public PInfo(String pName, String appName, String versionName, int versionCode, byte[] iconStream){
@@ -253,19 +264,25 @@ class PInfo implements Parcelable{
 	
 	public PInfo(){}
 	
-	//actually this is useless
-	public PInfo(String appName, String pName, ArrayList< PInfo > appList){
-		for(PInfo info: appList){
-			if( info.appName.equals(appName) && info.pName.equals(pName)){
-				this.appName = appName;
-				this.pName = pName;
-				this.versionCode = info.versionCode;
-				this.versionName = info.versionName;
-				this.bitmapIcon = info.bitmapIcon;
-				
-				break;
-			}
+	//
+	public Bitmap setBitmapIconFromDB(SQLiteDatabase db){
+		
+		String queryCmd = new String();
+		try{
+			db.execSQL(queryCmd);
+		}catch(SQLiteException e){
+			e.printStackTrace();
 		}
+			
+		return this.bitmapIcon;
+	}
+
+	public Bitmap getBitmap(){
+		return bitmapIcon;
+	}
+	
+	public void setBitmap(Bitmap bitmap){
+		bitmapIcon = bitmap;
 	}
 }
 
@@ -326,7 +343,7 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		}
 		
 		
-		holder.appIcon.setImageBitmap(info.bitmapIcon);
+		holder.appIcon.setImageBitmap(info.getBitmap());
 		holder.appName.setText(info.appName);
 		holder.appHint.setText(R.id.app_hint);
 		holder.appGraph.setImageResource(R.drawable.graph);
