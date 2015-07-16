@@ -29,10 +29,12 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -45,6 +47,9 @@ public class Catch extends Activity {
 	List< PInfo > mInstalledApps = null;
 	Map< String, Object > item;
 	BrowseAppInfoAdapter mListAdapter = null;
+	Button addButton = null;
+	Boolean mLoadFinished = false;
+	
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +72,21 @@ public class Catch extends Activity {
 		});
         
         rootList.setAdapter(mListAdapter);
+        
+        addButton = (Button)findViewById(R.id.add_button);
+        addButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				//判断是否已经加载完
+				if(mLoadFinished){
+					
+				}
+			}
+		});
+        
+        
     }
     
     private void init(){
@@ -74,9 +94,6 @@ public class Catch extends Activity {
     	//should add at the first time when the user install this app
     	 mInstalledApps = getInstalledApps(false);
          
-    	 
-    	 insertData(mInstalledApps.get(1));
-    	 insertData(mInstalledApps.get(2));
 
          ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
          
