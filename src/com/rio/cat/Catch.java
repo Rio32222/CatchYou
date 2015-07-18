@@ -2,12 +2,10 @@ package com.rio.cat;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import android.app.Activity;
-import android.app.DownloadManager.Query;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -20,14 +18,11 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.provider.ContactsContract.PinnedPositions;
-import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -37,7 +32,6 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 public class Catch extends Activity {
@@ -50,6 +44,8 @@ public class Catch extends Activity {
 	Button addButton = null;
 	Boolean mLoadFinished = false;
 	
+	ListView rootList = null;
+	ListView installedList = null;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +55,7 @@ public class Catch extends Activity {
         //should add initial code
         init();
         
-        ListView rootList = (ListView) findViewById(R.id.root_list);
+        rootList = (ListView) findViewById(R.id.root_list);
         rootList.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
@@ -73,6 +69,10 @@ public class Catch extends Activity {
         
         rootList.setAdapter(mListAdapter);
         
+        installedList = (ListView) findViewById(R.id.install_to_choose_list);
+        int padding 
+        installedList.setPadding(left, top, right, bottom);
+        		
         addButton = (Button)findViewById(R.id.add_button);
         addButton.setOnClickListener(new OnClickListener() {
 			
@@ -224,6 +224,40 @@ public class Catch extends Activity {
     	return false;
     }
     
+    private class LoadInstalledApps extends AsyncTask<String, Integer, ArrayList< PInfo >>{
+
+		@Override
+		protected ArrayList<PInfo> doInBackground(String... params) {
+			// TODO Auto-generated method stub
+			mInstalledApps = getInstalledApps(false);
+			
+			return null;
+		}
+    	
+		@Override
+		protected void onPostExecute(ArrayList< PInfo > installedApps){
+			
+		}
+
+		@Override
+		protected void onPreExecute() {
+			// TODO Auto-generated method stub
+			super.onPreExecute();
+		}
+
+		@Override
+		protected void onProgressUpdate(Integer... values) {
+			// TODO Auto-generated method stub
+			super.onProgressUpdate(values);
+		}
+
+		@Override
+		protected void onCancelled() {
+			// TODO Auto-generated method stub
+			super.onCancelled();
+		}
+		
+    }
 }
 
 class PInfo implements Parcelable{
@@ -346,7 +380,7 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		View view = null;
 		ViewHolder holder = null;
 		if ( convertView == null || convertView.getTag() == null){
-			view = inflater.inflate(R.layout.list_item, null);
+			view = inflater.inflate(R.layout.choose_list_item, null);
 			holder = new ViewHolder(view);
 			view.setTag(holder);
 		}else{
@@ -381,5 +415,82 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 			appGraph = (ImageView) view.findViewById(R.id.app_graph);
 		}
 	}
+}
+
+
+class ChooseAppAdapter extends BaseAdapter{
+	private List< PInfo > mListAppInfo = null;
 	
+	LayoutInflater inflater = null;
+	
+	public ChooseAppAdapter(Context context, List< PInfo > apps){
+		inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		if( apps == null ){
+			mListAppInfo = new ArrayList<PInfo>();
+		}else{
+			mListAppInfo = apps;
+		}
+	}
+	
+	public void addItem(Object object){
+		mListAppInfo.add( (PInfo)object );
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return mListAppInfo.size();
+	}
+
+	@Override
+	public Object getItem(int position) {
+		// TODO Auto-generated method stub
+		return mListAppInfo.get(position);
+	}
+
+	@Override
+	public long getItemId(int position) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(int position, View convertView, ViewGroup parent) {
+		// TODO Auto-generated method stub
+		View view = null;
+		ViewHolder holder = null;
+		if( convertView == null || convertView.getTag() == null ){
+			view = inflater.inflate(R.layout.choose_list_item, null);
+			holder = new ViewHolder(view);
+			view.setTag(holder);
+		}else{
+			view = convertView;
+			holder = (ViewHolder)view.getTag();
+		}
+		
+		if( holder == null ){
+			return null;
+		}
+		
+		PInfo info = (PInfo)getItem(position);
+		
+		holder.Icon.setImageBitmap(info.getBitmap());
+		holder.Name.setText(info.appName);
+		holder.Checked.setImageResource(R.drawable.choosed_icon);
+		
+		return view;
+	}
+	
+	class ViewHolder{
+		
+		ImageView Icon;
+		TextView Name;
+		ImageView Checked;
+		
+		public ViewHolder(View view){
+			Icon = (ImageView)view.findViewById(R.id.install_icon);
+			Name = (TextView)view.findViewById(R.id.install_name);
+			Checked = (ImageView)view.findViewById(R.id.install_choose);
+		}
+	}
 }
