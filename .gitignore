@@ -1,6 +1,7 @@
 #ignore files
 
 *.class
+*.classpath
 *.dex
 *.ap_
 *.apk
