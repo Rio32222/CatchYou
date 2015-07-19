@@ -17,6 +17,7 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -41,8 +42,8 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class Catch extends Activity {
-
 	public static final int HIDE_DUARATION = 600;
+	
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 	
 	ArrayList< PInfo > mInstalledApps = null;
@@ -65,8 +66,9 @@ public class Catch extends Activity {
         loadApps.execute("xiong");
         
         //should add initial code
-        init();
-        
+        ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
+        initRecordApps = getInitRecordApps();
+        mListAdapter = new BrowseAppInfoAdapter(this, initRecordApps);
         mRootList = (ListView) findViewById(R.id.root_list);
         mRootList.setOnItemClickListener(new OnItemClickListener() {
 
@@ -78,7 +80,6 @@ public class Catch extends Activity {
 			}
         	
 		});
-        
         mRootList.setAdapter(mListAdapter);
         
         mChoosePage = (LinearLayout) findViewById(R.id.install_choose_page);
@@ -98,7 +99,6 @@ public class Catch extends Activity {
 		});
      
         mOkButton= (Button)findViewById(R.id.choose_ok);
-        
         mOkButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -110,6 +110,11 @@ public class Catch extends Activity {
         
         LogC.d("activity load finished");
         
+        Intent intent = new Intent(Catch.this, RecordService.class);
+        intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
+        if( intent != null){
+        	startService(intent);
+        }
     }
     
     private Point getWidthHeight(){
@@ -121,35 +126,9 @@ public class Catch extends Activity {
         point.x = dm.widthPixels;
         point.y = dm.heightPixels;
         
-        LogC.d(point.toString());
     	return point;
     }
     
-    private void init(){
-    	
-    	//should add at the first time when the user install this app
-    	 mInstalledApps = getInstalledApps();
-         
-
-         ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
-         
-         //This is for a test --start
-         //initRecordApps.add(mInstalledApps.get(3));
-         //initRecordApps.add(mInstalledApps.get(4));
-         //This is for a test --end
-         
-         initRecordApps = getInitRecordApps();
-         
-        // LogC.d(mInstalledApps.get(3).pName);
-         
-         mListAdapter = new BrowseAppInfoAdapter(this, initRecordApps);
-         
-         Intent intent = new Intent(Catch.this, RecordService.class);
-         intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
-         if( intent != null){
-         	startService(intent);
-         }
-    }
         
     public void insertData(PInfo pInfo){
     	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
@@ -246,26 +225,41 @@ public class Catch extends Activity {
     	if( installedApps == null || installedApps.size() == 0 ){
     		return;
     	}
+    	Point point = getWidthHeight();
     	
     	ChooseAppAdapter chooseAdapter = new ChooseAppAdapter(this, installedApps);
     	mInstalledList.setAdapter(chooseAdapter);
     	
-    	
-    	Point point = getWidthHeight();
+    	try{
+    		//View itemView = (View)mInstalledList.getItemAtPosition(0);
+    		int hItem = chooseAdapter.getItemHeight() + mInstalledList.getDividerHeight();
+    		
+    		LinearLayout.LayoutParams lParams = (LinearLayout.LayoutParams)mInstalledList.getLayoutParams();
+    		
+    		lParams.height = ((int)(point.y*4/7/hItem))*hItem ;
+    		LogC.d(String.valueOf(lParams.height));
+    		mInstalledList.setLayoutParams(lParams);
+    	}catch(NullPointerException e){
+    		e.printStackTrace();
+    	}catch(ClassCastException e){
+    		e.printStackTrace();
+    	}
     	
     	TranslateAnimation transAni = new TranslateAnimation(0, 0, point.y, 0);//point.y/4);
     	transAni.setFillAfter(true);
     	transAni.setDuration(HIDE_DUARATION);
     	
-    	mChoosePage.setVisibility(View.VISIBLE);
-    	
     	mAddButton.setVisibility(View.GONE);
     	mAddButton.setEnabled(false);
     	
+    	mChoosePage.setVisibility(View.VISIBLE);
     	mChoosePage.startAnimation(transAni);
     	
     	mOkButton.setVisibility(View.VISIBLE);
     	mOkButton.setEnabled(true);
+    	
+    	mRootList.setBackgroundColor(getResources().getColor(R.color.check_page_unfocus));
+    	mRootList.setEnabled(false);
     }
     
     private void showCheckPage(){
@@ -278,11 +272,15 @@ public class Catch extends Activity {
     	transAni.setDuration(HIDE_DUARATION);
     	
     	mChoosePage.startAnimation(transAni);
-    	
     	mChoosePage.setVisibility(View.GONE);
+    	mChoosePage.setEnabled(false);
     	
     	mAddButton.setVisibility(View.VISIBLE);
     	mAddButton.setEnabled(true);
+    	
+    	mRootList.setBackgroundColor(getResources().getColor(R.color.check_page_background));
+    	//mRootList.setVisibility(View.GONE);
+    	mRootList.setEnabled(true);
     }
     
     public void addRecordApp(PInfo pInfo){
@@ -300,7 +298,9 @@ public class Catch extends Activity {
     }
     
     private class LoadInstalledApps extends AsyncTask<String, Integer, ArrayList< PInfo >>{
-
+    	public static final int ICON_HEIGHT = 144;
+    	public static final int ICON_WIDTH = 144;
+    	
 		@Override
 		protected ArrayList<PInfo> doInBackground(String... params) {
 			// TODO Auto-generated method stub
@@ -348,14 +348,39 @@ public class Catch extends Activity {
 	    		info.versionName = pack.versionName;
 	    		info.versionCode = pack.versionCode;
 	    		info.pName = pack.packageName;
+	    		
+	    		//get scaled bitmap
 	    		Drawable icon = pack.applicationInfo.loadIcon(getPackageManager());
-	    		info.setBitmap( ((BitmapDrawable)icon).getBitmap() );
+	    		Bitmap bm =zoomImage( ((BitmapDrawable)icon).getBitmap() );
+	    		
+	    		//LogC.d(String.valueOf(h) + " " + String.valueOf(w));
+	    		info.setBitmap( bm );
 	    		
 	    		res.add(info);
 	    		
 	    	}
 	    	return res;
 	    }
+		
+		//将icon图片压缩成一样的大小
+		private Bitmap zoomImage(Bitmap bm){
+			int h = bm.getHeight();
+    		int w = bm.getWidth();
+    		
+    		if( h == ICON_HEIGHT && w == ICON_WIDTH){
+    			return bm;
+    		}
+    		
+    		Matrix matrix = new Matrix();
+    		
+    		//计算宽高缩放率
+    		float scaleWidth = ((float)ICON_WIDTH)/w;
+    		float scaleHeight = ((float)ICON_HEIGHT)/h;
+    		matrix.postScale(scaleWidth, scaleHeight);
+    		
+    		Bitmap newBm = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
+    		return newBm;
+		}
     }
 }
 
@@ -520,6 +545,8 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 class ChooseAppAdapter extends BaseAdapter{
 	private List< PInfo > mListAppInfo = null;
 	
+	private int mItemHeight = 0;
+	
 	LayoutInflater inflater = null;
 	
 	public ChooseAppAdapter(Context context, List< PInfo > apps){
@@ -583,7 +610,15 @@ class ChooseAppAdapter extends BaseAdapter{
 			holder.Checked.setImageResource(R.drawable.choosed_icon);
 		}
 		
+		if( mItemHeight == 0){
+			mItemHeight = view.getHeight();
+		}
+		
 		return view;
+	}
+	
+	public int getItemHeight(){
+		return mItemHeight;
 	}
 	
 	class ViewHolder{
