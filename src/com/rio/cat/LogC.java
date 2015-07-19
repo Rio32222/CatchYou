@@ -3,7 +3,7 @@ package com.rio.cat;
 import android.util.*;
 
 public class LogC {
-	static final String Tag = "Rio.Catch";
+	static final String Tag = "com.rio.cat";
 	
 	public static void d(String msg){
 		Log.d(Tag, msg);

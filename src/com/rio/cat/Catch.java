@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
@@ -16,47 +17,58 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
+import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class Catch extends Activity {
 
+	public static final int HIDE_DUARATION = 600;
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 	
-	List< PInfo > mInstalledApps = null;
+	ArrayList< PInfo > mInstalledApps = null;
 	Map< String, Object > item;
 	BrowseAppInfoAdapter mListAdapter = null;
-	Button addButton = null;
+	Button mAddButton = null;
+	Button mOkButton = null;
 	Boolean mLoadFinished = false;
 	
-	ListView rootList = null;
-	ListView installedList = null;
+	ListView mRootList = null;
+	ListView mInstalledList = null;
+	LinearLayout mChoosePage = null;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_catch);
         
+        LoadInstalledApps loadApps = new LoadInstalledApps();
+        loadApps.execute("xiong");
+        
         //should add initial code
         init();
         
-        rootList = (ListView) findViewById(R.id.root_list);
-        rootList.setOnItemClickListener(new OnItemClickListener() {
+        mRootList = (ListView) findViewById(R.id.root_list);
+        mRootList.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
@@ -67,32 +79,56 @@ public class Catch extends Activity {
         	
 		});
         
-        rootList.setAdapter(mListAdapter);
+        mRootList.setAdapter(mListAdapter);
         
-        installedList = (ListView) findViewById(R.id.install_to_choose_list);
-        int padding 
-        installedList.setPadding(left, top, right, bottom);
-        		
-        addButton = (Button)findViewById(R.id.add_button);
-        addButton.setOnClickListener(new OnClickListener() {
+        mChoosePage = (LinearLayout) findViewById(R.id.install_choose_page);
+        mInstalledList = (ListView) findViewById(R.id.install_to_choose_list);
+        
+        mAddButton = (Button)findViewById(R.id.add_button);
+        mAddButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				//判断是否已经加载完
 				if(mLoadFinished){
-					
+					showChoosePage();
 				}
 			}
 		});
+     
+        mOkButton= (Button)findViewById(R.id.choose_ok);
         
+        mOkButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				showCheckPage();
+			}
+		});
         
+        LogC.d("activity load finished");
+        
+    }
+    
+    private Point getWidthHeight(){
+    	Point point = new Point();
+    	
+    	DisplayMetrics dm = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(dm);
+        
+        point.x = dm.widthPixels;
+        point.y = dm.heightPixels;
+        
+        LogC.d(point.toString());
+    	return point;
     }
     
     private void init(){
     	
     	//should add at the first time when the user install this app
-    	 mInstalledApps = getInstalledApps(false);
+    	 mInstalledApps = getInstalledApps();
          
 
          ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
@@ -185,29 +221,68 @@ public class Catch extends Activity {
     	return initApps;
     }
     
-    private ArrayList< PInfo > getInstalledApps(boolean getSysPackages){
-    	ArrayList<PInfo> res = new ArrayList<PInfo>();
-    	
-    	List<PackageInfo> packages = getPackageManager().getInstalledPackages(0);
-    	
-    	for(PackageInfo pack:packages){
-    		if( !(getSysPackages) && pack.versionName == null){
-    			continue;
-    		}
-    		
-    		PInfo info = new PInfo();
-    		info.appName = (String) pack.applicationInfo.loadLabel(getPackageManager());
-    		//LogC.d(info.appName);
-    		info.versionName = pack.versionName;
-    		info.versionCode = pack.versionCode;
-    		info.pName = pack.packageName;
-    		Drawable icon = pack.applicationInfo.loadIcon(getPackageManager());
-    		info.setBitmap( ((BitmapDrawable)icon).getBitmap() );
-    		
-    		res.add(info);
-    		
+    private ArrayList< PInfo > getInstalledApps(){
+    	int wait = 3;
+    	while( !mLoadFinished && wait > 0){
+    		try {
+				Thread.sleep(100);
+				wait = wait-1;
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	}
-    	return res;
+    	
+    	if( mLoadFinished ){
+    		return mInstalledApps;
+    	}else{
+    		return null;
+    	}
+    }
+    
+    private void showChoosePage(){
+    	
+    	ArrayList< PInfo > installedApps = getInstalledApps();
+    	if( installedApps == null || installedApps.size() == 0 ){
+    		return;
+    	}
+    	
+    	ChooseAppAdapter chooseAdapter = new ChooseAppAdapter(this, installedApps);
+    	mInstalledList.setAdapter(chooseAdapter);
+    	
+    	
+    	Point point = getWidthHeight();
+    	
+    	TranslateAnimation transAni = new TranslateAnimation(0, 0, point.y, 0);//point.y/4);
+    	transAni.setFillAfter(true);
+    	transAni.setDuration(HIDE_DUARATION);
+    	
+    	mChoosePage.setVisibility(View.VISIBLE);
+    	
+    	mAddButton.setVisibility(View.GONE);
+    	mAddButton.setEnabled(false);
+    	
+    	mChoosePage.startAnimation(transAni);
+    	
+    	mOkButton.setVisibility(View.VISIBLE);
+    	mOkButton.setEnabled(true);
+    }
+    
+    private void showCheckPage(){
+    	mOkButton.setVisibility(View.GONE);
+    	mOkButton.setEnabled(false);
+    	
+    	Point point = getWidthHeight();
+    	TranslateAnimation transAni = new TranslateAnimation(0, 0,  0, point.y);
+    	transAni.setFillAfter(true);
+    	transAni.setDuration(HIDE_DUARATION);
+    	
+    	mChoosePage.startAnimation(transAni);
+    	
+    	mChoosePage.setVisibility(View.GONE);
+    	
+    	mAddButton.setVisibility(View.VISIBLE);
+    	mAddButton.setEnabled(true);
     }
     
     public void addRecordApp(PInfo pInfo){
@@ -230,8 +305,8 @@ public class Catch extends Activity {
 		protected ArrayList<PInfo> doInBackground(String... params) {
 			// TODO Auto-generated method stub
 			mInstalledApps = getInstalledApps(false);
-			
-			return null;
+			mLoadFinished = true;
+			return mInstalledApps;
 		}
     	
 		@Override
@@ -257,6 +332,30 @@ public class Catch extends Activity {
 			super.onCancelled();
 		}
 		
+		private ArrayList< PInfo > getInstalledApps(boolean getSysPackages){
+	    	ArrayList<PInfo> res = new ArrayList<PInfo>();
+	    	
+	    	List<PackageInfo> packages = getPackageManager().getInstalledPackages(0);
+	    	
+	    	for(PackageInfo pack:packages){
+	    		if( !(getSysPackages) && pack.versionName == null){
+	    			continue;
+	    		}
+	    		
+	    		PInfo info = new PInfo();
+	    		info.appName = (String) pack.applicationInfo.loadLabel(getPackageManager());
+	    		//LogC.d(info.appName);
+	    		info.versionName = pack.versionName;
+	    		info.versionCode = pack.versionCode;
+	    		info.pName = pack.packageName;
+	    		Drawable icon = pack.applicationInfo.loadIcon(getPackageManager());
+	    		info.setBitmap( ((BitmapDrawable)icon).getBitmap() );
+	    		
+	    		res.add(info);
+	    		
+	    	}
+	    	return res;
+	    }
     }
 }
 
@@ -436,6 +535,10 @@ class ChooseAppAdapter extends BaseAdapter{
 		mListAppInfo.add( (PInfo)object );
 	}
 
+	public void deleteItem(int location){
+		mListAppInfo.remove(location);
+	}
+	
 	@Override
 	public int getCount() {
 		// TODO Auto-generated method stub
@@ -454,13 +557,13 @@ class ChooseAppAdapter extends BaseAdapter{
 		return 0;
 	}
 
-	@Override
+	@SuppressLint("InflateParams") @Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		// TODO Auto-generated method stub
 		View view = null;
 		ViewHolder holder = null;
 		if( convertView == null || convertView.getTag() == null ){
-			view = inflater.inflate(R.layout.choose_list_item, null);
+			view = inflater.inflate(R.layout.installed_list_item, null);
 			holder = new ViewHolder(view);
 			view.setTag(holder);
 		}else{
@@ -474,9 +577,11 @@ class ChooseAppAdapter extends BaseAdapter{
 		
 		PInfo info = (PInfo)getItem(position);
 		
-		holder.Icon.setImageBitmap(info.getBitmap());
-		holder.Name.setText(info.appName);
-		holder.Checked.setImageResource(R.drawable.choosed_icon);
+		if ( info != null ){
+			holder.Icon.setImageBitmap(info.getBitmap());
+			holder.Name.setText(info.appName);
+			holder.Checked.setImageResource(R.drawable.choosed_icon);
+		}
 		
 		return view;
 	}
