@@ -66,7 +66,7 @@ public class Catch extends Activity {
         loadApps.execute("xiong");
 
         mRootLayout = (RelativeLayout)findViewById(R.id.root);
-        
+
         //should add initial code
         ArrayList< PInfo > initRecordApps = new ArrayList<PInfo>();
         initRecordApps = getInitRecordApps();
@@ -218,9 +218,9 @@ public class Catch extends Activity {
 
 		//add choose page view
 		LayoutInflater inflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		
+
 		mChoosePage =(LinearLayout)inflater.inflate(R.layout.choose_page, null);
-		
+
 		if( mChoosePage != null ){
 			ListView chooseListView =  (ListView)mChoosePage.findViewById(R.id.install_to_choose_list);
 			if( chooseListView != null){
@@ -228,7 +228,7 @@ public class Catch extends Activity {
 				chooseListView.setAdapter(chooseAdapter);
 				try{
 					int hItem = chooseAdapter.getItemHeight() + chooseListView.getDividerHeight();
-					
+
 					LinearLayout.LayoutParams lParams = (LinearLayout.LayoutParams)chooseListView.getLayoutParams();
 
 					lParams.height = ((int)(point.y*4/7/hItem))*hItem ;
@@ -241,11 +241,11 @@ public class Catch extends Activity {
 					e.printStackTrace();
 				}
 			}
-			
+
 
 			RelativeLayout.LayoutParams rParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 			rParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-			
+
 			mRootLayout.addView(mChoosePage, rParams);
 		}
 
@@ -267,11 +267,11 @@ public class Catch extends Activity {
     public void onOkClickListener(View v){
     	showCheckPage();
     }
-    
+
     private void showCheckPage(){
 
     	Point point = getWidthHeight();
-    	
+
     	if( mChoosePage != null ){
     		TranslateAnimation transAni = new TranslateAnimation(0, 0,  0, point.y);
         	transAni.setFillAfter(true);
@@ -282,7 +282,7 @@ public class Catch extends Activity {
         	mChoosePage.setEnabled(false);
         	mRootLayout.removeView(mChoosePage);
     	}
-    	
+
     	mAddButton.setVisibility(View.VISIBLE);
     	mAddButton.setEnabled(true);
 
@@ -512,7 +512,7 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 		View view = null;
 		ViewHolder holder = null;
 		if ( convertView == null || convertView.getTag() == null){
-			view = inflater.inflate(R.layout.choose_page, null);
+			view = inflater.inflate(R.layout.check_list_item, null);
 			holder = new ViewHolder(view);
 			view.setTag(holder);
 		}else{
