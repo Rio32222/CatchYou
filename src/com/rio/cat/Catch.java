@@ -598,7 +598,7 @@ class ChooseAppAdapter extends BaseAdapter{
 		View view = null;
 		ViewHolder holder = null;
 		if( convertView == null || convertView.getTag() == null ){
-			view = inflater.inflate(R.layout.installed_list_item, null);
+			view = inflater.inflate(R.layout.choose_list_item, null);
 			holder = new ViewHolder(view);
 			view.setTag(holder);
 		}else{
