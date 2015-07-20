@@ -1,0 +1,35 @@
+<LinearLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/install_choose_page"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:visibility="invisible"
+    android:orientation="vertical"
+    android:layout_alignParentBottom="true"
+    android:alpha="1"
+    android:dividerPadding="2dp"
+    android:background="@color/choose_page_background">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="@string/choose_title"
+        android:layout_gravity="center"
+        android:visibility="visible"
+        android:textSize="30sp"/>
+
+    <ListView
+      android:id="@+id/install_to_choose_list"
+      android:layout_width="match_parent"
+      android:layout_height="300dp"
+      android:dividerHeight="2dp">
+  	</ListView>
+
+    <Button
+      android:id="@+id/choose_ok"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:onClick="onOkClickListener"/>
+
+</LinearLayout>
