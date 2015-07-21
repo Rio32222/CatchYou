@@ -222,7 +222,9 @@ public class Catch extends Activity {
 		//add choose page view
 		LayoutInflater inflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
-		mChoosePage =(LinearLayout)inflater.inflate(R.layout.choose_page, null);
+		if( mChoosePage == null ){
+			mChoosePage =(LinearLayout)inflater.inflate(R.layout.choose_page, null);
+		}
 
 		if( mChoosePage != null ){
 			ListView chooseListView =  (ListView)mChoosePage.findViewById(R.id.install_to_choose_list);
@@ -250,8 +252,10 @@ public class Catch extends Activity {
 			rParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
 
 			mRootLayout.addView(mChoosePage, rParams);
+		}else{
+			Logc.e("choose page is null");
+			return;
 		}
-
 
     	TranslateAnimation transAni = new TranslateAnimation(0, 0, point.y, 0);//point.y/4);
     	transAni.setFillAfter(true);
