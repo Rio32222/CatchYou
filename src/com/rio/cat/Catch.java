@@ -44,7 +44,9 @@ import android.widget.TextView;
 
 public class Catch extends Activity {
 	public static final int HIDE_DUARATION = 600;
-
+	public static final int ICON_HEIGHT = 144;
+	public static final int ICON_WIDTH = 144;
+	
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 
 	ArrayList< PInfo > mInstalledApps = null;
@@ -175,8 +177,9 @@ public class Catch extends Activity {
 
     			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_ICON_KEY);
     			byte [] iconByte = cursor.getBlob(index);
-
-    			pInfo.setBitmap( BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length));
+    			
+    			Bitmap bm = zoomImage( BitmapFactory.decodeByteArray(iconByte, 0, iconByte.length) );
+    			pInfo.setBitmap(bm);
 
     			initApps.add(pInfo);
 
@@ -305,9 +308,32 @@ public class Catch extends Activity {
     	return false;
     }
 
+  //compress the bitmap to the right scale
+	protected Bitmap zoomImage(Bitmap bm){
+		
+		if( bm ==  null){
+  			return null;
+  		}
+		
+		int h = bm.getHeight();
+  		int w = bm.getWidth();
+  		
+  		if( h == ICON_HEIGHT && w == ICON_WIDTH){
+  			return bm;
+  		}
+
+  		Matrix matrix = new Matrix();
+
+  		//��������������
+  		float scaleWidth = ((float)ICON_WIDTH)/w;
+  		float scaleHeight = ((float)ICON_HEIGHT)/h;
+  		matrix.postScale(scaleWidth, scaleHeight);
+
+  		Bitmap newBm = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
+  		return newBm;
+	}
+  		
     private class LoadInstalledApps extends AsyncTask<String, Integer, ArrayList< PInfo >>{
-    	public static final int ICON_HEIGHT = 144;
-    	public static final int ICON_WIDTH = 144;
 
 		@Override
 		protected ArrayList<PInfo> doInBackground(String... params) {
@@ -370,25 +396,6 @@ public class Catch extends Activity {
 	    	return res;
 	    }
 
-		//��iconͼƬѹ����һ���Ĵ�С
-		private Bitmap zoomImage(Bitmap bm){
-			int h = bm.getHeight();
-    		int w = bm.getWidth();
-
-    		if( h == ICON_HEIGHT && w == ICON_WIDTH){
-    			return bm;
-    		}
-
-    		Matrix matrix = new Matrix();
-
-    		//��������������
-    		float scaleWidth = ((float)ICON_WIDTH)/w;
-    		float scaleHeight = ((float)ICON_HEIGHT)/h;
-    		matrix.postScale(scaleWidth, scaleHeight);
-
-    		Bitmap newBm = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
-    		return newBm;
-		}
     }
 }
 
@@ -528,7 +535,7 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 
 		holder.appIcon.setImageBitmap(info.getBitmap());
 		holder.appName.setText(info.appName);
-		holder.appHint.setText(R.id.app_hint);
+		holder.appHint.setText(R.string.default_hint);
 		holder.appGraph.setImageResource(R.drawable.graph);
 
 		return view;

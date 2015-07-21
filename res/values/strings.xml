@@ -3,6 +3,6 @@
 
     <string name="app_name">catch</string>
     <string name="hello_world">Hello world!</string>
-	<string name="default_hint">还没有使用此app来记录</string>
+	<string name="default_hint">距离上次使用此程序已有</string>
 	<string name="choose_title">Choose which to check</string>
 </resources>
