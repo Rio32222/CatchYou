@@ -253,7 +253,7 @@ public class Catch extends Activity {
 
 			mRootLayout.addView(mChoosePage, rParams);
 		}else{
-			Logc.e("choose page is null");
+			LogC.e("choose page is null");
 			return;
 		}
 
