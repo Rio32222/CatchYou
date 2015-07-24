@@ -157,4 +157,18 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 			return null;
 		}
 	}
+	
+	public boolean delRecord(String indexStr){
+		SQLiteDatabase db = getWritableDatabase();
+		
+		String del = "delete from " + TABLE + " where " + DB_PACKAGE_KEY +"=" + indexStr; 
+		try{
+			LogC.d(del);
+			db.execSQL(del);
+		}catch(SQLiteException e){
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
 }

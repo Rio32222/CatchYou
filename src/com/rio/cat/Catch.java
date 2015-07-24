@@ -2,6 +2,7 @@ package com.rio.cat;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,8 @@ public class Catch extends Activity {
 	
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 
+	private boolean mfirstShowChoosePage = true;
+	
 	ArrayList< PInfo > mInstalledApps = null;
 	Map< String, Object > item;
 	BrowseAppInfoAdapter mListAdapter = null;
@@ -58,6 +61,7 @@ public class Catch extends Activity {
 	LinearLayout mChoosePage = null;
 	RelativeLayout mRootLayout = null;
 	ListView mRootList = null;
+	
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,10 +96,7 @@ public class Catch extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				//�ж��Ƿ��Ѿ�������
-				if(mLoadFinished){
-					showChoosePage();
-				}
+				showChoosePage();
 			}
 		});
 
@@ -120,13 +121,37 @@ public class Catch extends Activity {
     	return point;
     }
 
+    private boolean checkWhetherInDB(PInfo pInfo){
+    	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
+    	if( storeDBHelper == null){
+    		LogC.e("store app database is null");
+    		return false;
+    	}
+    	
+    	Cursor cursor = storeDBHelper.getStoreDBCursor();
+    	if( (cursor != null) && (!cursor.isClosed()) ){
+    		while(cursor.moveToNext()){
+    			int index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_PACKAGE_KEY);
+    			String pName = cursor.getString(index);
+    			if( pName.equals(pInfo.pName)){
+    				return true;
+    			}
+    		}
+    	}
+    	
+    	return false;
+    }
 
-    public void insertData(PInfo pInfo){
+    public void insertRecordApp(PInfo pInfo){
     	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
     	if( storeDBHelper == null){
     		return;
     	}
 
+    	if( checkWhetherInDB(pInfo) ){
+    		return;
+    	}
+    	
     	ContentValues keyValues = new ContentValues();
     	keyValues.put(CatchStoreAppDBHelper.DB_PACKAGE_KEY, pInfo.pName);
     	keyValues.put(CatchStoreAppDBHelper.DB_APPNAME_KEY, pInfo.appName);
@@ -146,7 +171,15 @@ public class Catch extends Activity {
 
     }
 
-
+    public void removeRecordApp(PInfo pInfo){
+    	CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
+    	if( storeDBHelper == null){
+    		return;
+    	}
+    	
+    	storeDBHelper.delRecord(pInfo.pName);
+    }
+    
     public ArrayList< PInfo > getInitRecordApps(){
     	ArrayList< PInfo > initApps = new ArrayList< PInfo >();
 
@@ -163,6 +196,8 @@ public class Catch extends Activity {
     		while( cursor.moveToNext() ){
 
     			PInfo pInfo = new PInfo();
+    			pInfo.choosed = true;
+    			
     			index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_APPNAME_KEY);
     			pInfo.appName = cursor.getString(index);
 
@@ -188,32 +223,78 @@ public class Catch extends Activity {
     		cursor.close();
     	}
 
-
     	return initApps;
     }
 
     private ArrayList< PInfo > getInstalledApps(){
-    	int wait = 3;
-    	while( !mLoadFinished && wait > 0){
+    	int retry = 3;
+    	while( !mLoadFinished && retry > 0){
     		try {
 				Thread.sleep(100);
-				wait = wait-1;
+				retry = retry-1;
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
     	}
+    	
+    	int count = mListAdapter.getCount();
 
+    	
     	if( mLoadFinished ){
+        	if( mfirstShowChoosePage ){
+	        	for( PInfo pInfo: mInstalledApps ){
+	        		for( int i = 0; i < count; i++){
+	        			if( pInfo.equals( mListAdapter.getItem(i))){
+	        				pInfo.choosed = true;
+	        			}
+	        		}
+	        	}
+        	}
     		return mInstalledApps;
     	}else{
     		return null;
     	}
     }
 
+    public void deleteOrAddItem(PInfo pInfo, boolean addOrDel){
+    	if( addOrDel ){
+    		mListAdapter.addItem(pInfo);
+    		mListAdapter.notifyDataSetChanged();
+    		insertRecordApp(pInfo);
+    	}else{
+    		mListAdapter.delItem(pInfo);
+    		mListAdapter.notifyDataSetChanged();
+    		removeRecordApp(pInfo);
+    	}
+    }
+    
+    private void onChooseItemClicked(AdapterView<?> parent, View view, int position, long id){
+    	try{
+    		ImageView chooseView = (ImageView)view.findViewById(R.id.install_choose);
+    		
+    		if( chooseView != null ){
+				PInfo pInfo = (PInfo)parent.getAdapter().getItem(position);
+	    		if( pInfo.choosed ){
+	    			pInfo.choosed = false;
+	    			chooseView.setImageResource(R.drawable.to_choose_icon);
+	    			deleteOrAddItem(pInfo, false);
+	    		}else{
+	    			pInfo.choosed = true;
+	    			chooseView.setImageResource(R.drawable.choosed_icon);
+	    			deleteOrAddItem(pInfo, true);
+	    		}
+			}
+    	}catch(Exception e){
+    		e.printStackTrace();
+    		return;
+    	}
+    }
+    
     private void showChoosePage(){
 
     	ArrayList< PInfo > installedApps = getInstalledApps();
+    	
     	if( installedApps == null || installedApps.size() == 0 ){
     		return;
     	}
@@ -224,38 +305,47 @@ public class Catch extends Activity {
 
 		if( mChoosePage == null ){
 			mChoosePage =(LinearLayout)inflater.inflate(R.layout.choose_page, null);
-		}
+			
+			if( mChoosePage == null){
+				LogC.e("choose page is null");
+				return;
+			}else{
+				ListView chooseListView =  (ListView)mChoosePage.findViewById(R.id.install_to_choose_list);
+				if( chooseListView != null){
+					ChooseAppAdapter chooseAdapter = new ChooseAppAdapter(this, installedApps);
+					chooseListView.setAdapter(chooseAdapter);
+					chooseListView.setOnItemClickListener(new OnItemClickListener() {
 
-		if( mChoosePage != null ){
-			ListView chooseListView =  (ListView)mChoosePage.findViewById(R.id.install_to_choose_list);
-			if( chooseListView != null){
-				ChooseAppAdapter chooseAdapter = new ChooseAppAdapter(this, installedApps);
-				chooseListView.setAdapter(chooseAdapter);
-				try{
-					int hItem = chooseAdapter.getItemHeight() + chooseListView.getDividerHeight();
+						@Override
+						public void onItemClick(AdapterView<?> parent,
+								View view, int position, long id) {
+							// TODO Auto-generated method stub
+							onChooseItemClicked(parent, view, position, id);
+						}
+					});
+					
+					try{
+						int hItem = chooseAdapter.getItemHeight() + chooseListView.getDividerHeight();
 
-					LinearLayout.LayoutParams lParams = (LinearLayout.LayoutParams)chooseListView.getLayoutParams();
+						LinearLayout.LayoutParams lParams = (LinearLayout.LayoutParams)chooseListView.getLayoutParams();
 
-					lParams.height = ((int)(point.y*4/7/hItem))*hItem ;
-					LogC.d(String.valueOf("list height = " + lParams.height));
-					chooseListView.setLayoutParams(lParams);
+						lParams.height = ((int)(point.y*4/7/hItem))*hItem ;
+						LogC.d(String.valueOf("list height = " + lParams.height));
+						chooseListView.setLayoutParams(lParams);
 
-				}catch(NullPointerException e){
-					e.printStackTrace();
-				}catch(ClassCastException e){
-					e.printStackTrace();
+					}catch(NullPointerException e){
+						e.printStackTrace();
+					}catch(ClassCastException e){
+						e.printStackTrace();
+					}
 				}
 			}
-
-
-			RelativeLayout.LayoutParams rParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-			rParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-
-			mRootLayout.addView(mChoosePage, rParams);
-		}else{
-			LogC.e("choose page is null");
-			return;
 		}
+
+		RelativeLayout.LayoutParams rParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		rParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+
+		mRootLayout.addView(mChoosePage, rParams);
 
     	TranslateAnimation transAni = new TranslateAnimation(0, 0, point.y, 0);//point.y/4);
     	transAni.setFillAfter(true);
@@ -302,7 +392,7 @@ public class Catch extends Activity {
 
     }
 
-
+    /*
     private boolean checkWhetherInDefaultApps(String name){
     	for( String appname:DefaultApps){
     		if(appname.contains(name)){
@@ -311,7 +401,8 @@ public class Catch extends Activity {
     	}
     	return false;
     }
-
+	*/
+    
   //compress the bitmap to the right scale
 	protected Bitmap zoomImage(Bitmap bm){
 		
@@ -409,6 +500,8 @@ class PInfo implements Parcelable{
 	public String versionName="";
 	public int versionCode= -1;
 	private Bitmap bitmapIcon;
+	public boolean choosed = false;
+	
 	@Override
 	public int describeContents() {
 		// TODO Auto-generated method stub
@@ -438,7 +531,17 @@ class PInfo implements Parcelable{
 			return new PInfo(source);
 		}
 	};
-
+	
+	@Override
+	public boolean equals(Object B){
+		String pStrA = this.appName + this.pName;
+		String pStrB = (( PInfo )B).appName + (( PInfo )B).pName;
+		if( pStrA.equals(pStrB) ){
+			return true;
+		}
+		return false;
+	}
+	
 	public PInfo(Parcel in){
 		appName = in.readString();
 		pName = in.readString();
@@ -496,9 +599,22 @@ class BrowseAppInfoAdapter extends BaseAdapter{
 	}
 
 	public void addItem(Object object){
+		Iterator< PInfo > iter = mListAppInfo.iterator();
+		PInfo pInfo;
+		while(iter.hasNext()){
+			pInfo = iter.next();
+			if( pInfo.equals( (PInfo)object) ){
+				return;
+			}
+		}
+			
 		mListAppInfo.add((PInfo) object);
 	}
 
+	public void delItem(Object object){
+		mListAppInfo.remove((PInfo) object);
+	}
+	
 	@Override
 	public int getCount() {
 		// TODO Auto-generated method stub
@@ -626,7 +742,11 @@ class ChooseAppAdapter extends BaseAdapter{
 		if ( info != null ){
 			holder.Icon.setImageBitmap(info.getBitmap());
 			holder.Name.setText(info.appName);
-			holder.Checked.setImageResource(R.drawable.choosed_icon);
+			if( info.choosed ){
+				holder.Checked.setImageResource(R.drawable.choosed_icon);
+			}else{
+				holder.Checked.setImageResource(R.drawable.to_choose_icon);
+			}
 		}
 
 		if( mItemHeight == 0){
