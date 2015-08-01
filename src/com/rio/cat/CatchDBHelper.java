@@ -76,6 +76,19 @@ class CatchStoreDataDBHelper extends SQLiteOpenHelper{
 		
 		return true;
 	}
+	
+	public boolean deleteData(PInfo pInfo){
+		SQLiteDatabase db = getWritableDatabase();
+		
+		try{
+			db.delete(TABLE, DB_PACKAGE_KEY, new String []{pInfo.pName});
+		}catch(SQLiteException e){
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+	
 }
 
 class CatchStoreAppDBHelper extends SQLiteOpenHelper{

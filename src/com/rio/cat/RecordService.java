@@ -9,9 +9,15 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.view.View.OnCreateContextMenuListener;
@@ -35,6 +41,12 @@ public class RecordService extends Service {
 		//注册监听拨号盘
 		
 		//注册监听器，监听activity的动作
+		MyReceiver myReceiver = new MyReceiver();
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(Catch.LISTENER_ACTION);
+		registerReceiver(myReceiver, filter);
+		
+		
 	}
 	
 	
@@ -84,11 +96,26 @@ public class RecordService extends Service {
 		mRecordAppList = apps;
 	}
 	
-	private synchronized void addAppItem(PInfo info){
+	private synchronized void addAppItem(PInfo pInfo){
+		for( PInfo packInfo: mRecordAppList){
+			if( packInfo.equals(pInfo) ){
+				return;
+			}
+		}
 		
+		mRecordAppList.add(pInfo);
 	}
 	
-	private synchronized ArrayList< PInfo > delAppItem(PInfo info){
+
+	private synchronized ArrayList< PInfo > delAppItem(PInfo pInfo){
+		for( PInfo packInfo: mRecordAppList){
+			if( packInfo.equals(pInfo) ){
+				mRecordAppList.remove(packInfo);
+				delDataFromDB(pInfo);
+				LogC.d(packInfo.pName + " deleted");
+				break;
+			}
+		}
 		return null;
 	}
 	
@@ -121,6 +148,18 @@ public class RecordService extends Service {
 		
 		insertDataToDB(pInfo, flag, sysTime);
 		
+	}
+	
+	public void delDataFromDB(PInfo pInfo){
+		CatchStoreDataDBHelper dbHelper = CatchStoreDataDBHelper.getInstance(this);
+		if( dbHelper == null ){
+			LogC.e("DB is not created, delete data error");
+			return;
+		}
+		
+		if ( !dbHelper.deleteData(pInfo) ){
+			LogC.e("From data error: " + pInfo.pName + " " + pInfo.appName);
+		}
 	}
 	
 	@SuppressLint("SimpleDateFormat") 
@@ -162,6 +201,69 @@ public class RecordService extends Service {
 		
 	}
 	
+	public void updateRecordApps(){
+		ArrayList< PInfo > recordAppsFromDB = getRecordAppsFromDB();
+		ArrayList< PInfo > recordingAppList = getRecordAppList();
+		
+		for(PInfo pInfoDB: recordAppsFromDB){
+			for(PInfo pInfoRecord: recordingAppList){
+				if( pInfoRecord.equals(pInfoDB) ){
+					recordingAppList.remove(pInfoRecord);
+					break;
+				}
+			}
+			
+		}
+		
+	}
+	
+	private ArrayList< PInfo > getRecordAppsFromDB(){
+		ArrayList< PInfo > initApps = new ArrayList< PInfo >();
+	
+		CatchStoreAppDBHelper storeDBHelper = CatchStoreAppDBHelper.getInstance(this);
+		if( storeDBHelper == null){
+			return null;
+		}
+	
+		//query for the databases to get the initapps;
+		//store first
+		Cursor cursor = storeDBHelper.getStoreDBCursor();
+		int index = 0;
+		if( cursor != null && !cursor.isClosed() ){
+			while( cursor.moveToNext() ){
+	
+				PInfo pInfo = new PInfo();
+				pInfo.choosed = true;
+				
+				index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_APPNAME_KEY);
+				pInfo.appName = cursor.getString(index);
+	
+				index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_PACKAGE_KEY);
+				pInfo.pName = cursor.getString(index);
+	
+				index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_VERSIONNAME_KEY);
+				pInfo.versionName = cursor.getString(index);
+	
+				index = cursor.getColumnIndex(CatchStoreAppDBHelper.DB_VERSIONCODE_KEY);
+				pInfo.versionCode = cursor.getInt(index);
+					
+				initApps.add(pInfo);
+			}
+			cursor.close();
+	}
+
+	return initApps;
+	}
+	protected class MyReceiver extends BroadcastReceiver{
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			// TODO Auto-generated method stub
+			boolean action = intent.getBooleanExtra(Catch.ACTION_ADD_DEL_CHECKAPP, false);
+			if( action ){
+				updateRecordApps();
+			}
+		}
+	}
 	
 	class CheckBackwardRunnable implements Runnable{
 
@@ -212,11 +314,13 @@ public class RecordService extends Service {
 					//如果上次运行的app和这次运行的app时间不一致，则检查两个app是否需要被记录时间
 					PInfo pInfo = checkWhetherInRecordApps(currentPackageName);
 					if ( pInfo != null ){
+						LogC.e("record exit " + pInfo.pName);
 						recordChangedTime(pInfo, FLAG_CHANGED);
 					}
 					
 					pInfo = checkWhetherInRecordApps(runningPackageName);
 					if ( pInfo != null ){
+						LogC.e("record enter " + pInfo.pName);
 						recordChangedTime(pInfo, FLAG_START);
 					}
 				}

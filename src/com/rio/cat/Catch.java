@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import android.R.bool;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
@@ -47,6 +48,13 @@ public class Catch extends Activity {
 	public static final int HIDE_DUARATION = 600;
 	public static final int ICON_HEIGHT = 144;
 	public static final int ICON_WIDTH = 144;
+	
+	public static final String LISTENER_ACTION = "com.rio.cat.service_listener";
+	public static final String ACTION_ADD_DEL_CHECKAPP = "add_del_check_app";
+	public static final String ACTION_APP_INFO = "get_app_info";
+	public static final int ACTION_INVALID = -1;
+	public static final int ACTION_ADD = 1;
+	public static final int ACTION_DEL = 2;
 	
 	public final String[] DefaultApps= {"Calendar", "Dialer"};
 
@@ -100,13 +108,13 @@ public class Catch extends Activity {
 			}
 		});
 
-        LogC.d("activity load finished");
-
         Intent intent = new Intent(Catch.this, RecordService.class);
         intent.putParcelableArrayListExtra("inital_record_apps", initRecordApps);
         if( intent != null){
         	startService(intent);
         }
+        
+        LogC.d("activity load finished");
     }
 
     private Point getWidthHeight(){
@@ -217,8 +225,6 @@ public class Catch extends Activity {
     			pInfo.setBitmap(bm);
 
     			initApps.add(pInfo);
-
-
     		}
     		cursor.close();
     	}
@@ -267,6 +273,7 @@ public class Catch extends Activity {
     		mListAdapter.notifyDataSetChanged();
     		removeRecordApp(pInfo);
     	}
+    	
     }
     
     private void onChooseItemClicked(AdapterView<?> parent, View view, int position, long id){
@@ -359,10 +366,16 @@ public class Catch extends Activity {
 
     	mRootList.setBackgroundColor(getResources().getColor(R.color.check_page_unfocus));
     	mRootList.setEnabled(false);
+    	
     }
 
     public void onOkClickListener(View v){
     	showCheckPage();
+    	
+    	Intent sendIntent = new Intent(Catch.LISTENER_ACTION);
+    	sendIntent.putExtra(Catch.ACTION_ADD_DEL_CHECKAPP, true);
+    	
+    	sendBroadcast(sendIntent);
     }
 
     private void showCheckPage(){
