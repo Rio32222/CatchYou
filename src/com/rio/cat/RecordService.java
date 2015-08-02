@@ -46,7 +46,6 @@ public class RecordService extends Service {
 		filter.addAction(Catch.LISTENER_ACTION);
 		registerReceiver(myReceiver, filter);
 		
-		
 	}
 	
 	
@@ -81,7 +80,6 @@ public class RecordService extends Service {
 			if( mCheckRunnable != null){
 				new Thread( mCheckRunnable).start();
 			}
-			
 		}
 		
 		isServiceAlive = true;
@@ -89,6 +87,11 @@ public class RecordService extends Service {
 	}
 	
 	private synchronized ArrayList< PInfo > getRecordAppList(){
+		/*
+		for( PInfo pInfo: mRecordAppList){
+			LogC.d("record app list " + pInfo.pName);
+		}
+		*/
 		return mRecordAppList;
 	}
 	
@@ -102,10 +105,8 @@ public class RecordService extends Service {
 				return;
 			}
 		}
-		
 		mRecordAppList.add(pInfo);
 	}
-	
 
 	private synchronized ArrayList< PInfo > delAppItem(PInfo pInfo){
 		for( PInfo packInfo: mRecordAppList){
@@ -143,8 +144,6 @@ public class RecordService extends Service {
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		
-		LogC.v(String.valueOf(sysTime) + " " + String.valueOf(flag));
 		
 		insertDataToDB(pInfo, flag, sysTime);
 		
@@ -203,18 +202,32 @@ public class RecordService extends Service {
 	
 	public void updateRecordApps(){
 		ArrayList< PInfo > recordAppsFromDB = getRecordAppsFromDB();
-		ArrayList< PInfo > recordingAppList = getRecordAppList();
+		ArrayList< PInfo > recordingAppList = new ArrayList<PInfo>(getRecordAppList());
 		
-		for(PInfo pInfoDB: recordAppsFromDB){
-			for(PInfo pInfoRecord: recordingAppList){
-				if( pInfoRecord.equals(pInfoDB) ){
-					recordingAppList.remove(pInfoRecord);
+		for(int i = 0; i < recordAppsFromDB.size(); i++){
+			PInfo pInfoDB = recordAppsFromDB.get(i);
+			for( int j = 0; j < recordingAppList.size(); j++){
+				PInfo pInfo = recordingAppList.get(j);
+				if( pInfoDB.equals(pInfo)){
+					recordAppsFromDB.remove(i);
+					recordingAppList.remove(j);
+					i--;
 					break;
 				}
 			}
-			
 		}
 		
+		for( int i = 0; i < recordAppsFromDB.size(); i++ ){
+			PInfo pInfoDB = recordAppsFromDB.get(i);
+			LogC.d("app should add " + pInfoDB.pName);
+			addAppItem(pInfoDB);
+		}
+		
+		for( int j = 0; j < recordingAppList.size(); j++){
+			PInfo pInfo = recordingAppList.get(j);
+			LogC.d("app should remove " + pInfo.pName);
+			delAppItem(pInfo);
+		}
 	}
 	
 	private ArrayList< PInfo > getRecordAppsFromDB(){
@@ -309,7 +322,7 @@ public class RecordService extends Service {
 					SystemClock.sleep(sleepTime*1000);
 					continue;
 				}else{
-					//LogC.v(runningPackageName);
+					LogC.v(runningPackageName);
 					//LogC.v(currentPackageName);
 					//如果上次运行的app和这次运行的app时间不一致，则检查两个app是否需要被记录时间
 					PInfo pInfo = checkWhetherInRecordApps(currentPackageName);

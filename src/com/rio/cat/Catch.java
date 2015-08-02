@@ -370,11 +370,11 @@ public class Catch extends Activity {
     }
 
     public void onOkClickListener(View v){
+    	//show check page to decide which ones you should check
     	showCheckPage();
-    	
+
     	Intent sendIntent = new Intent(Catch.LISTENER_ACTION);
     	sendIntent.putExtra(Catch.ACTION_ADD_DEL_CHECKAPP, true);
-    	
     	sendBroadcast(sendIntent);
     }
 
@@ -405,6 +405,11 @@ public class Catch extends Activity {
 
     }
 
+    public int updateRecordTime(PInfo pInfo){
+    	
+    	return 0;
+    }
+    
     /*
     private boolean checkWhetherInDefaultApps(String name){
     	for( String appname:DefaultApps){

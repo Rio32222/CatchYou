@@ -80,8 +80,9 @@ class CatchStoreDataDBHelper extends SQLiteOpenHelper{
 	public boolean deleteData(PInfo pInfo){
 		SQLiteDatabase db = getWritableDatabase();
 		
+		String delSQL = "delete from " + TABLE + " where " + DB_PACKAGE_KEY + "=\'" + pInfo.pName + "\'";
 		try{
-			db.delete(TABLE, DB_PACKAGE_KEY, new String []{pInfo.pName});
+			db.execSQL(delSQL);//(TABLE, DB_PACKAGE_KEY, new String []{pInfo.pName});
 		}catch(SQLiteException e){
 			e.printStackTrace();
 			return false;
@@ -174,10 +175,9 @@ class CatchStoreAppDBHelper extends SQLiteOpenHelper{
 	public boolean delRecord(String indexStr){
 		SQLiteDatabase db = getWritableDatabase();
 		
-		String del = "delete from " + TABLE + " where " + DB_PACKAGE_KEY +"=" + indexStr; 
+		String delSQL = "delete from " + TABLE + " where " + DB_PACKAGE_KEY +"=" + "\'" + indexStr + "\'"; 
 		try{
-			LogC.d(del);
-			db.execSQL(del);
+			db.execSQL(delSQL);
 		}catch(SQLiteException e){
 			e.printStackTrace();
 			return false;
